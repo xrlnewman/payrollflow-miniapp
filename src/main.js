@@ -142,7 +142,7 @@ function localFollowup() {
   }
 }
 
-async function refreshFromApi() {
+async function refreshFromApi({ quiet = false } = {}) {
   const results = await Promise.allSettled([
     api.listAppointments({ page: 1, pageSize: 20 }),
     api.listFollowups({ page: 1, pageSize: 20 }),
@@ -166,7 +166,7 @@ async function refreshFromApi() {
   }
   dataSource = synced ? '接口数据' : '演示数据'
   render()
-  showToast(synced ? '已同步最新薪资单与薪资跟进' : '服务暂不可用，继续使用演示数据')
+  if (!quiet) showToast(synced ? '已同步最新薪资单与薪资跟进' : '服务暂不可用，继续使用演示数据')
 }
 
 async function advancePayrollWorkflow(id) {
@@ -275,4 +275,4 @@ function bindActions() {
 }
 
 render()
-void refreshFromApi()
+void refreshFromApi({ quiet: true })
