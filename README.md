@@ -1,6 +1,6 @@
 # PayrollFlow Miniapp
 
-免费开源的薪酬绩效运营移动端，覆盖薪资单申请、确认、候诊、处理状态、业务档案和复诊任务。演示数据均为虚构，不涉及诊断、处方、支付或真实客户隐私。
+薪酬绩效运营移动端，覆盖薪资周期查看、个人薪资单、绩效结果、调整项确认和反馈提交。演示数据均为虚构，不接入真实人事或薪资隐私。
 
 ## 本地运行
 
@@ -15,7 +15,7 @@ npm run dev
 VITE_API_PROXY_TARGET=http://localhost:8088 npm run dev
 ```
 
-## API 闭环
+## API 与状态同步
 
 页面默认请求 `/api/v1`，生产环境可通过 `VITE_API_BASE_URL` 指向独立的 PayrollFlow API 服务。所有写操作会自动生成 `Idempotency-Key`，避免重复薪资单、重复确认和重复完成回访。
 
@@ -33,7 +33,7 @@ npm test
 npm run build
 ```
 
-## 产品边界
+## 运行范围
 
-PayrollFlow 移动端是免费开源的 薪酬绩效体验端，与对应 Admin/API 通过同一套幂等接口联动。
+PayrollFlow 移动端与对应 Admin/API 通过同一套幂等接口联动，员工和主管可在移动端查看周期、确认调整并提交反馈。
 
