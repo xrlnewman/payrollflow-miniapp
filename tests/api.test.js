@@ -96,3 +96,12 @@ test('非零响应会抛错，调用方可以保留演示数据', async () => {
 
   await assert.rejects(() => client.updateAppointmentStatus('AP-1', '候诊中'), /状态不可推进/)
 })
+
+test('移动端工资条客户端可以读取周期详情并提交调整', async () => {
+  const calls = []
+  const client = createApiClient({ fetchImpl: async (url, init = {}) => { calls.push({ url, init }); return response({ id: 'PP-1', status: '待复核' }) } })
+  await client.listPayrollPeriods({ page: 1 })
+  await client.getPayrollPeriod('PP-1')
+  await client.addPayrollAdjustment('PP-1', { employeeId: 'EMP-001', amount: '1.20', reason: '补贴' })
+  assert.deepEqual(calls.map(({ url }) => url), ['/api/v1/payroll-periods?page=1', '/api/v1/payroll-periods/PP-1', '/api/v1/payroll-periods/PP-1/adjustments'])
+})

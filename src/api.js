@@ -67,6 +67,12 @@ export function createApiClient({ baseUrl, fetchImpl = globalThis.fetch } = {}) 
     listFollowups: (query) => request(withQuery('/followups', query)),
     createFollowup: (input, idempotencyKey) => request('/followups', { method: 'POST', body: input, idempotencyKey }),
     completeFollowup: (id, idempotencyKey) => request(`/followups/${encodeURIComponent(id)}/complete`, { method: 'POST', idempotencyKey }),
+    listPayrollPeriods: (query) => request(withQuery('/payroll-periods', query)),
+    getPayrollPeriod: (id) => request(`/payroll-periods/${encodeURIComponent(id)}`),
+    calculatePayroll: (id, idempotencyKey) => request(`/payroll-periods/${encodeURIComponent(id)}/calculate`, { method: 'POST', idempotencyKey }),
+    reviewPayroll: (id, idempotencyKey) => request(`/payroll-periods/${encodeURIComponent(id)}/review`, { method: 'POST', idempotencyKey }),
+    payPayroll: (id, idempotencyKey) => request(`/payroll-periods/${encodeURIComponent(id)}/pay`, { method: 'POST', idempotencyKey }),
+    addPayrollAdjustment: (id, input, idempotencyKey) => request(`/payroll-periods/${encodeURIComponent(id)}/adjustments`, { method: 'POST', body: input, idempotencyKey }),
   }
 }
 

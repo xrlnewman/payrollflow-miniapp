@@ -17,6 +17,11 @@ const demoFollowups = [
 
 let appointments = [...demoAppointments]
 let followups = [...demoFollowups]
+let payrollPeriods = [
+  { id: 'PP-202607-001', name: '2026年7月薪资', employeeCount: 128, totalNet: '1,128,420.35', status: '待复核' },
+  { id: 'PP-202606-001', name: '2026年6月薪资', employeeCount: 124, totalNet: '1,098,220.00', status: '发放中' },
+  { id: 'PP-202605-001', name: '2026年5月薪资', employeeCount: 121, totalNet: '1,062,998.40', status: '已归档' },
+]
 let dataSource = '演示数据'
 const busyActions = new Set()
 
@@ -98,6 +103,7 @@ function render() {
     <section class="visits">${appointments.length ? appointments.map(renderAppointment).join('') : '<div class="empty">暂时没有薪资单，点击上方薪资单申请创建一条</div>'}</section>
     <div class="section-head"><h3>薪资跟进 <small class="coral">${followups.filter((item) => item.status !== '已完成').length} 条待办</small></h3><a data-action="refresh">查看 →</a></div>
     <section class="reminders">${followups.length ? followups.slice(0, 3).map(renderFollowup).join('') : '<div class="empty">暂无薪资跟进</div>'}</section>
+    <section class="workflow-mini" style="margin:22px 0 90px"><div class="section-head"><h3>薪资周期 <small>${payrollPeriods.length} 个</small></h3><a data-action="refresh">同步 →</a></div><div class="workflow-steps" style="display:flex;gap:7px;overflow:auto;margin-bottom:10px;color:#574a9a;font-size:11px"><span>考勤</span><i>→</i><span>计算</span><i>→</i><span>复核</span><i>→</i><span>发放</span><i>→</i><span>归档</span></div>${payrollPeriods.map((item) => `<article class="workflow-card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 12px;margin:8px 0;background:#fff;border:1px solid #ebe9f4;border-radius:16px"><div><strong>${escapeHtml(item.name)}</strong><p style="margin:4px 0;color:#6b6883;font-size:12px">${escapeHtml(item.id)} · ${item.employeeCount} 名员工</p><small style="color:#a06c52;font-size:11px">净发 ¥${escapeHtml(item.totalNet)} · ${escapeHtml(item.status)}</small></div><button style="border:0;background:#4b3f91;color:#fff;border-radius:10px;padding:8px 10px;font-size:11px" data-action="payroll-workflow" data-id="${escapeHtml(item.id)}" data-status="${escapeHtml(item.status)}">${item.status === '待复核' ? '复核锁定' : item.status === '发放中' ? '查看批次' : item.status === '已归档' ? '查看工资条' : '开始计算'}</button></article>`).join('')}</section>
     <nav><button class="active">⌂<small>首页</small></button><button data-action="create-appointment">＋<small>薪资单</small></button><button data-action="refresh">◷<small>发放</small></button><button data-action="create-followup">✓<small>跟进</small></button></nav>
     <div class="toast" hidden></div>
   </main>`
@@ -140,6 +146,7 @@ async function refreshFromApi() {
   const results = await Promise.allSettled([
     api.listAppointments({ page: 1, pageSize: 20 }),
     api.listFollowups({ page: 1, pageSize: 20 }),
+    api.listPayrollPeriods({ page: 1, pageSize: 20 }),
   ])
   let synced = 0
   const appointmentsResult = results[0]
@@ -152,9 +159,24 @@ async function refreshFromApi() {
     followups = followupsResult.value.list
     synced += 1
   }
+  const payrollResult = results[2]
+  if (payrollResult.status === 'fulfilled' && Array.isArray(payrollResult.value?.list) && payrollResult.value.list.length) {
+    payrollPeriods = payrollResult.value.list
+    synced += 1
+  }
   dataSource = synced ? '接口数据' : '演示数据'
   render()
   showToast(synced ? '已同步最新薪资单与薪资跟进' : '服务暂不可用，继续使用演示数据')
+}
+
+async function advancePayrollWorkflow(id) {
+  const item = payrollPeriods.find((entry) => entry.id === id)
+  if (!item) return
+  try {
+    const updated = item.status === '草稿' || item.status === '计算中' ? await api.calculatePayroll(id) : item.status === '待复核' ? await api.reviewPayroll(id) : item.status === '待发放' || item.status === '发放中' ? await api.payPayroll(id) : await api.getPayrollPeriod(id)
+    payrollPeriods = payrollPeriods.map((entry) => entry.id === id ? { ...entry, ...updated } : entry)
+    dataSource = '接口数据'; render(); showToast(`${id} 已更新`)
+  } catch (error) { showToast(`操作未完成：${error.message}`) }
 }
 
 async function createAppointment() {
@@ -240,6 +262,7 @@ async function handleAction(action, id) {
     if (action === 'create-followup') await createFollowup()
     if (['checkin', 'waiting', 'serving', 'complete-appointment'].includes(action)) await transitionAppointment(id, action)
     if (action === 'complete-followup') await completeFollowup(id)
+    if (action === 'payroll-workflow') await advancePayrollWorkflow(id)
   } finally {
     busyActions.delete(key)
   }
